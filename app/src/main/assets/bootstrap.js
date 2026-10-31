@@ -102,9 +102,31 @@
 
     // Rewrite every Reddit listing JSON the script fetches.
     const origFetch = window.fetch;
+    // RedGifs API now needs a temporary bearer token; without it the script falls back to
+    // the iframe player (which swallows swipes). Add the token so it gets the direct video.
+    let rgToken = null;
+    async function redgifsToken() {
+        if (rgToken) return rgToken;
+        const r = await origFetch.call(window, 'https://api.redgifs.com/v2/auth/temporary');
+        rgToken = (await r.json()).token;
+        return rgToken;
+    }
+
     window.fetch = async function (input, init) {
-        const res = await origFetch.call(this, input, init);
         const url = typeof input === 'string' ? input : (input && input.url) || '';
+        if (/^https:\/\/api\.redgifs\.com\/v2\/gifs\//.test(url)) {
+            try {
+                const tok = await redgifsToken();
+                let r = await origFetch.call(this, url, { headers: { Authorization: 'Bearer ' + tok } });
+                if (r.status === 401) {
+                    rgToken = null;
+                    r = await origFetch.call(this, url, { headers: { Authorization: 'Bearer ' + (await redgifsToken()) } });
+                }
+                if (r.ok) return r;
+            } catch (_) { }
+            return origFetch.call(this, input, init);
+        }
+        const res = await origFetch.call(this, input, init);
         if (!/reddit\.com\/.*\.json/.test(url)) return res;
         try {
             const data = await res.clone().json();

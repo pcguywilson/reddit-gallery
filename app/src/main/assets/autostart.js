@@ -26,6 +26,9 @@
         #gallery-container { padding-bottom: 96px !important; }
         #fullscreen-content { width: 100vw !important; max-width: 100vw !important;
             height: 86vh !important; max-height: 86vh !important; }
+        /* Swipe layer over embedded players; bottom strip left open for their controls */
+        #fullscreen-content .rg-swipe { position: absolute; left: 0; right: 0; top: 0; bottom: 22%;
+            z-index: 5; background: transparent; }
         /* Always fill the viewer: small images/videos scale up, large ones scale down */
         #fullscreen-content img, #fullscreen-content video {
             width: 100% !important; height: 100% !important;
@@ -51,6 +54,18 @@
             const a = (window.__rgAge || {})[t];
             if (a) fsTitle.textContent = t + '  · ' + a;
         }).observe(fsTitle, { childList: true, characterData: true, subtree: true });
+    }
+
+    // When the script falls back to an iframe player, cover it so swipes reach the viewer.
+    const fsContent = document.getElementById('fullscreen-content');
+    if (fsContent) {
+        new MutationObserver(() => {
+            if (fsContent.querySelector('iframe') && !fsContent.querySelector('.rg-swipe')) {
+                const layer = document.createElement('div');
+                layer.className = 'rg-swipe';
+                fsContent.appendChild(layer);
+            }
+        }).observe(fsContent, { childList: true });
     }
 
     const viewer = document.getElementById('fullscreen-viewer');
