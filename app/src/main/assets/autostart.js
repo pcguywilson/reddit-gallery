@@ -43,6 +43,16 @@
     const launcher = document.getElementById('gallery-launcher');
     if (launcher && !document.body.classList.contains('gallery-mode')) launcher.click();
 
+    // Fullscreen title: append post age
+    const fsTitle = document.getElementById('fullscreen-title');
+    if (fsTitle) {
+        new MutationObserver(() => {
+            const t = fsTitle.textContent;
+            const a = (window.__rgAge || {})[t];
+            if (a) fsTitle.textContent = t + '  · ' + a;
+        }).observe(fsTitle, { childList: true, characterData: true, subtree: true });
+    }
+
     const viewer = document.getElementById('fullscreen-viewer');
     const key = k => window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
 

@@ -69,6 +69,26 @@
         }
     }
 
+    // Post age ("3h ago"). Shown in the grid meta line (appended to author, which the
+    // script prints as "u/NAME") and in the fullscreen title (autostart.js looks it up).
+    window.__rgAge = window.__rgAge || {};
+    function ago(utc) {
+        if (!utc) return '';
+        const s = Math.max(0, Date.now() / 1000 - utc);
+        if (s < 3600) return Math.max(1, Math.floor(s / 60)) + 'm ago';
+        if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+        if (s < 86400 * 30) return Math.floor(s / 86400) + 'd ago';
+        return new Date(utc * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    function addAge(p) {
+        if (!p || p.__rgAged) return;
+        const a = ago(p.created_utc);
+        if (!a) return;
+        p.__rgAged = true;
+        p.author = (p.author || '') + ' · ' + a;
+        if (p.title) window.__rgAge[p.title] = a;
+    }
+
     // Rewrite every Reddit listing JSON the script fetches.
     const origFetch = window.fetch;
     window.fetch = async function (input, init) {
@@ -81,7 +101,7 @@
                 let kids = data.data.children;
                 // NSFW off: drop over_18 posts
                 if (!cfg.nsfw) kids = kids.filter(c => !(c.data && c.data.over_18));
-                kids.forEach(c => fixMedia(c.data));
+                kids.forEach(c => { fixMedia(c.data); addAge(c.data); });
                 data.data.children = kids;
                 return new Response(JSON.stringify(data), {
                     status: res.status, statusText: res.statusText, headers: res.headers
