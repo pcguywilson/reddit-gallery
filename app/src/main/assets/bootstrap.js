@@ -11,6 +11,17 @@
         return Promise.reject(new Error('fullscreen handled by app'));
     };
 
+    // Sandbox every iframe (redgifs player etc.) before it loads: scripts and fullscreen
+    // still work, but it can't navigate the app or open popups.
+    const SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
+    const ifrSrc = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, 'src');
+    Object.defineProperty(HTMLIFrameElement.prototype, 'src', {
+        configurable: true,
+        get() { return ifrSrc.get.call(this); },
+        set(v) { this.setAttribute('sandbox', SANDBOX); ifrSrc.set.call(this, v); }
+    });
+    window.open = function () { return null; };
+
     // Mute by default: script-driven unmutes are ignored; user unmutes via native video controls.
     if (cfg.muteDefault) {
         const mutedD = Object.getOwnPropertyDescriptor(P, 'muted');

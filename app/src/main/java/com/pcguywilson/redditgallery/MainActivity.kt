@@ -137,6 +137,9 @@ class MainActivity : AppCompatActivity() {
             builtInZoomControls = false
             userAgentString = userAgentString.replace("; wv", "")
             userAgent = userAgentString
+            // With this off, window.open() loads the popup in this WebView. On + onCreateWindow=false = blocked.
+            setSupportMultipleWindows(true)
+            javaScriptCanOpenWindowsAutomatically = false
         }
         web.setBackgroundColor(Color.parseColor("#1A1A1B"))
         CookieManager.getInstance().setAcceptCookie(true)
@@ -153,6 +156,11 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (u.host?.endsWith("reddit.com") == true && u.path?.contains("/comments/") == true) {
                     openInRedditApp(u)
+                    return true
+                }
+                // Embeds (redgifs etc.) live in iframes; never let anything take over the main view.
+                if (request.isForMainFrame && !isAllowedHost(u.host)) {
+                    toast("Blocked redirect to ${u.host}")
                     return true
                 }
                 return false
@@ -181,6 +189,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onHideCustomView() = hideCustomView()
+
+            override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean = false
 
             // Avoid WebView's grey play-button poster
             override fun getDefaultVideoPoster(): Bitmap =
@@ -237,6 +247,13 @@ class MainActivity : AppCompatActivity() {
                 toast("No app can open Reddit links")
             }
         }
+    }
+
+    private fun isAllowedHost(host: String?): Boolean {
+        val h = host ?: return false
+        return h == "reddit.com" || h.endsWith(".reddit.com") ||
+            // third-party sign-in on the reddit login page
+            h == "accounts.google.com" || h == "appleid.apple.com"
     }
 
     private fun isListing(url: String?): Boolean {
