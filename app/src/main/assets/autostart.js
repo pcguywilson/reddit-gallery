@@ -22,6 +22,10 @@
         #gallery-container { padding-bottom: 96px !important; }
         #fullscreen-content { width: 100vw !important; max-width: 100vw !important;
             height: 86vh !important; max-height: 86vh !important; }
+        /* Always fill the viewer: small images/videos scale up, large ones scale down */
+        #fullscreen-content img, #fullscreen-content video {
+            width: 100% !important; height: 100% !important;
+            max-width: 100% !important; max-height: 100% !important; object-fit: contain !important; }
     `;
     document.head.appendChild(css);
 

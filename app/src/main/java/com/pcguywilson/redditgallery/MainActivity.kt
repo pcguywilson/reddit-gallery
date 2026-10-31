@@ -33,7 +33,12 @@ import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import android.webkit.JavascriptInterface
 
 class MainActivity : AppCompatActivity() {
 
@@ -136,6 +141,7 @@ class MainActivity : AppCompatActivity() {
         web.setBackgroundColor(Color.parseColor("#1A1A1B"))
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
+        web.addJavascriptInterface(Bridge(), "RGBridge")
 
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -154,6 +160,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
+                pageHost = Uri.parse(url).host
                 CookieManager.getInstance().flush()
                 captureUsername()
                 if (isListing(url)) {
@@ -274,8 +281,47 @@ class MainActivity : AppCompatActivity() {
 
     fun isLoggedIn() = CookieManager.getInstance().getCookie(BASE)?.contains("reddit_session=") == true
 
-    /** Blocking GET using the WebView's reddit cookies. Call from [io]. */
+    /**
+     * Blocking GET with the WebView's reddit session. Call from [io].
+     * Runs fetch() inside the page (same network stack and cookies as the feed) when an
+     * old.reddit.com page is loaded; falls back to HttpURLConnection otherwise.
+     */
     fun getJson(url: String): String {
+        if (pageHost != "old.reddit.com") return httpGet(url)
+        val id = fetchSeq.incrementAndGet()
+        val req = PendingFetch()
+        pendingFetches[id] = req
+        val js = "fetch(${JSONObject.quote(url)},{credentials:'include',headers:{Accept:'application/json'}})" +
+            ".then(function(r){return r.ok?r.text():Promise.reject(new Error('HTTP '+r.status))})" +
+            ".then(function(t){RGBridge.result($id,true,t)},function(e){RGBridge.result($id,false,String(e&&e.message||e))})"
+        runOnUiThread { web.evaluateJavascript(js, null) }
+        try {
+            if (!req.latch.await(30, TimeUnit.SECONDS)) throw RuntimeException("timed out")
+        } finally {
+            pendingFetches.remove(id)
+        }
+        if (!req.ok) throw RuntimeException(req.body)
+        return req.body
+    }
+
+    private class PendingFetch {
+        val latch = CountDownLatch(1)
+        @Volatile var ok = false
+        @Volatile var body = ""
+    }
+
+    private val pendingFetches = ConcurrentHashMap<Int, PendingFetch>()
+    private val fetchSeq = AtomicInteger()
+    @Volatile private var pageHost: String? = null
+
+    private inner class Bridge {
+        @JavascriptInterface
+        fun result(id: Int, ok: Boolean, body: String) {
+            pendingFetches[id]?.let { it.ok = ok; it.body = body; it.latch.countDown() }
+        }
+    }
+
+    private fun httpGet(url: String): String {
         val c = URL(url).openConnection() as HttpURLConnection
         try {
             c.connectTimeout = 15000

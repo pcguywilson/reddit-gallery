@@ -41,23 +41,53 @@
         }).observe(document.documentElement, { childList: true, subtree: true });
     }
 
-    // NSFW off: strip over_18 posts from every Reddit listing JSON the script fetches.
-    if (!cfg.nsfw) {
-        const origFetch = window.fetch;
-        window.fetch = async function (input, init) {
-            const res = await origFetch.call(this, input, init);
-            const url = typeof input === 'string' ? input : (input && input.url) || '';
-            if (!/reddit\.com\/.*\.json/.test(url)) return res;
-            try {
-                const data = await res.clone().json();
-                if (data && data.data && Array.isArray(data.data.children)) {
-                    data.data.children = data.data.children.filter(c => !(c.data && c.data.over_18));
-                    return new Response(JSON.stringify(data), {
-                        status: res.status, statusText: res.statusText, headers: res.headers
-                    });
+    // Full-size media for posts that would otherwise fall back to the 140px thumbnail:
+    // galleries (first image from media_metadata) and crossposts (parent's media/preview).
+    function fixMedia(p) {
+        if (!p) return;
+        const parent = Array.isArray(p.crosspost_parent_list) && p.crosspost_parent_list[0];
+        if (parent) {
+            if (!p.preview && parent.preview) p.preview = parent.preview;
+            if (!p.media_metadata && parent.media_metadata) p.media_metadata = parent.media_metadata;
+            if (!p.gallery_data && parent.gallery_data) p.gallery_data = parent.gallery_data;
+            if (parent.is_video && parent.media && parent.media.reddit_video) {
+                p.is_video = true;
+                p.media = parent.media;
+            }
+        }
+        if (!(p.preview && p.preview.images && p.preview.images[0]) && p.media_metadata) {
+            const order = (p.gallery_data && p.gallery_data.items || []).map(i => i.media_id);
+            const ids = order.length ? order : Object.keys(p.media_metadata);
+            for (const id of ids) {
+                const m = p.media_metadata[id];
+                const src = m && m.s && (m.s.u || m.s.gif);
+                if (src) {
+                    p.preview = { images: [{ source: { url: src, width: m.s.x, height: m.s.y } }] };
+                    break;
                 }
-            } catch (_) { }
-            return res;
-        };
+            }
+        }
     }
+
+    // Rewrite every Reddit listing JSON the script fetches.
+    const origFetch = window.fetch;
+    window.fetch = async function (input, init) {
+        const res = await origFetch.call(this, input, init);
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        if (!/reddit\.com\/.*\.json/.test(url)) return res;
+        try {
+            const data = await res.clone().json();
+            if (data && data.data && Array.isArray(data.data.children)) {
+                let kids = data.data.children;
+                // NSFW off: drop over_18 posts
+                if (!cfg.nsfw) kids = kids.filter(c => !(c.data && c.data.over_18));
+                kids.forEach(c => fixMedia(c.data));
+                data.data.children = kids;
+                return new Response(JSON.stringify(data), {
+                    status: res.status, statusText: res.statusText, headers: res.headers
+                });
+            }
+        } catch (_) { }
+        return res;
+    };
 })();
