@@ -11,7 +11,10 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.EditText
+import android.widget.Filter
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -265,15 +268,18 @@ class LeftPanel(private val act: MainActivity) {
     }
 
     private fun promptAdd() {
-        val input = EditText(act).apply {
+        val adapter = SuggestAdapter(act)
+        val input = AutoCompleteTextView(act).apply {
             hint = "pics, pics+aww, or a multireddit URL"
             isSingleLine = true
+            threshold = 2
+            setAdapter(adapter)
         }
         val box = FrameLayout(act).apply {
             setPadding(Ui.dp(act, 20), Ui.dp(act, 8), Ui.dp(act, 20), 0)
             addView(input)
         }
-        AlertDialog.Builder(act)
+        val dialog = AlertDialog.Builder(act)
             .setTitle("Add subreddit")
             .setView(box)
             .setPositiveButton("Add") { _, _ ->
@@ -281,7 +287,73 @@ class LeftPanel(private val act: MainActivity) {
                 FeedStore.parseAny(text)?.let { addFeed(it) } ?: act.toast("Couldn't parse \"$text\"")
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+
+        // Tap a suggestion = add it and close
+        input.setOnItemClickListener { _, _, pos, _ ->
+            val name = adapter.getItem(pos) ?: return@setOnItemClickListener
+            addFeed(Feed("r/$name", "/r/$name"))
+            dialog.dismiss()
+        }
+
+        // Live suggestions from Reddit as you type (debounced)
+        var gen = 0
+        val debounce = Handler(Looper.getMainLooper())
+        input.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                debounce.removeCallbacksAndMessages(null)
+                val q = s.toString().trim().removePrefix("/").removePrefix("r/")
+                val my = ++gen
+                if (q.length < 2 || q.contains('/')) { adapter.set(emptyList()); return }
+                debounce.postDelayed({
+                    act.io.execute {
+                        val names = suggest(q)
+                        act.runOnUiThread {
+                            if (my != gen || !dialog.isShowing) return@runOnUiThread
+                            adapter.set(names)
+                            if (names.isNotEmpty() && input.hasFocus()) input.showDropDown()
+                        }
+                    }
+                }, 300)
+            }
+        })
+        dialog.setOnDismissListener { debounce.removeCallbacksAndMessages(null); gen++ }
+        dialog.show()
+    }
+
+    /** Prefix autocomplete; falls back to full search. Blocking, call from io. */
+    private fun suggest(q: String): List<String> {
+        val nsfw = act.nsfwOn()
+        val enc = URLEncoder.encode(q, "UTF-8")
+        val urls = listOf(
+            "${MainActivity.BASE}/api/subreddit_autocomplete_v2.json?raw_json=1&limit=10&include_profiles=false" +
+                "&include_over_18=$nsfw&query=$enc",
+            "${MainActivity.BASE}/subreddits/search.json?raw_json=1&limit=10&q=$enc" +
+                if (nsfw) "&include_over_18=on" else ""
+        )
+        for (url in urls) {
+            try {
+                val children = JSONObject(act.getJson(url)).getJSONObject("data").getJSONArray("children")
+                val names = (0 until children.length()).map { children.getJSONObject(it).getJSONObject("data") }
+                    .filter { nsfw || !it.optBoolean("over18") }
+                    .mapNotNull { it.optString("display_name").takeIf { n -> n.isNotEmpty() && !n.startsWith("u_") } }
+                if (names.isNotEmpty()) return names
+            } catch (_: Exception) { }
+        }
+        return emptyList()
+    }
+
+    /** Shows exactly what the API returned (ArrayAdapter's own prefix filter would hide some). */
+    private class SuggestAdapter(ctx: Context) :
+        ArrayAdapter<String>(ctx, android.R.layout.simple_dropdown_item_1line, mutableListOf()) {
+        private var items: List<String> = emptyList()
+        fun set(list: List<String>) { items = list; clear(); addAll(list); notifyDataSetChanged() }
+        override fun getFilter(): Filter = object : Filter() {
+            override fun performFiltering(c: CharSequence?) = FilterResults().apply { values = items; count = items.size }
+            override fun publishResults(c: CharSequence?, r: FilterResults?) { notifyDataSetChanged() }
+        }
     }
 
     private fun random() {

@@ -29,7 +29,7 @@ Injection happens in `onPageFinished` only for listing URLs (`/`, `/r/*`, `/all`
 
 **Left (subreddits)**: swipe in from the left edge, or long-press the orange button.
 - Pinned: frontpage, all, popular. Below that, your app-only list, alphabetical, with an A-Z index (tap or drag).
-- Seeded on first run with a few defaults. **+** at the top adds a subreddit (`pics`, `pics+aww`, URL) or a multireddit URL.
+- Seeded on first run with a few defaults. **+** at the top adds a subreddit (`pics`, `pics+aww`, URL) or a multireddit URL. Suggestions drop down as you type; tap one to add it.
 - Sort button (bottom left) toggles A-Z vs custom order. In custom order drag the ≡ handle to reorder; long-press for Move to top / bottom / Remove. In A-Z, long-press removes.
 - Bottom bar: search (filters your list, offers "go to r/<text>", and searches Reddit; **+** on a result adds it), random (random pick from your list), settings.
 - Stored only on the phone (SharedPreferences `feeds.xml`).
