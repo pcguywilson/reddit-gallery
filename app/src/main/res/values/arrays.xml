@@ -1,0 +1,10 @@
+<resources>
+    <string-array name="swipe_entries">
+        <item>Vertical (up = next, down = previous)</item>
+        <item>Vertical + horizontal (left = next, right = previous)</item>
+    </string-array>
+    <string-array name="swipe_values">
+        <item>vertical</item>
+        <item>both</item>
+    </string-array>
+</resources>
