@@ -7,4 +7,14 @@
         <item>vertical</item>
         <item>both</item>
     </string-array>
+    <string-array name="media_entries">
+        <item>Images and videos</item>
+        <item>Images only</item>
+        <item>Videos only</item>
+    </string-array>
+    <string-array name="media_values">
+        <item>all</item>
+        <item>images</item>
+        <item>videos</item>
+    </string-array>
 </resources>

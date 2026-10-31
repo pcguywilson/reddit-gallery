@@ -204,6 +204,7 @@ class MainActivity : AppCompatActivity() {
             .put("nsfw", nsfwOn())
             .put("swipe", prefs.getString("swipe", "vertical"))
             .put("tapNav", prefs.getBoolean("tap_nav", false))
+            .put("media", prefs.getString("media_filter", "all"))
         val js = buildString {
             append("window.__RG_CFG = ").append(cfg.toString()).append(";\n")
             append(bootJs).append("\n;\n")

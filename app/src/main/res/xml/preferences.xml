@@ -53,6 +53,14 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Content" app:iconSpaceReserved="false">
+        <ListPreference
+            app:defaultValue="all"
+            app:entries="@array/media_entries"
+            app:entryValues="@array/media_values"
+            app:iconSpaceReserved="false"
+            app:key="media_filter"
+            app:title="Show"
+            app:useSimpleSummaryProvider="true" />
         <SwitchPreferenceCompat
             app:defaultValue="false"
             app:iconSpaceReserved="false"

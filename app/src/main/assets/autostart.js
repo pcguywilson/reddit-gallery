@@ -6,10 +6,14 @@
 
     const css = document.createElement('style');
     css.textContent = `
-        #gallery-launcher, #btn-toggle-gallery { display: none !important; }
+        #gallery-launcher, #btn-toggle-gallery, #btn-all, #btn-images, #btn-videos, #btn-options { display: none !important; }
         #gallery-container { padding: 10px !important; }
-        #gallery-controls { position: static !important; transform: none !important;
-            margin: 0 0 10px 0 !important; padding: 6px !important; gap: 6px !important; }
+        /* Only Sort is left in the top bar (media filter lives in app Settings) */
+        #gallery-controls { position: static !important; transform: none !important; display: flex !important;
+            justify-content: flex-end !important; margin: 0 0 8px 0 !important; padding: 0 !important;
+            background: transparent !important; box-shadow: none !important; }
+        .gallery-select-wrap { padding: 0 10px !important; font-size: 13px !important; }
+        .gallery-select-wrap select { min-height: 34px !important; font-size: 13px !important; }
         #gallery-controls button { padding: 8px 10px !important; font-size: 13px !important; }
         #gallery-grid { margin-top: 0 !important; }
         #gallery-options-panel { margin: 0 auto 10px !important; }
@@ -28,6 +32,12 @@
             max-width: 100% !important; max-height: 100% !important; object-fit: contain !important; }
     `;
     document.head.appendChild(css);
+
+    // Media filter from app Settings (click before the launcher so the first load is already filtered).
+    if (cfg.media && cfg.media !== 'all') {
+        const b = document.getElementById('btn-' + cfg.media);
+        if (b) b.click();
+    }
 
     // Auto-enter gallery mode (the script starts with galleryEnabled = false).
     const launcher = document.getElementById('gallery-launcher');

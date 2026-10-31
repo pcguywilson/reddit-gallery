@@ -21,7 +21,7 @@ Local (optional):
 
 The userscript is not modified. Two shims wrap it:
 - `assets/bootstrap.js` (runs before): mute-by-default, autoplay off, NSFW filter (drops `over_18` posts from listing JSON), disables element fullscreen (app is already immersive).
-- `assets/autostart.js` (runs after): clicks the launcher to enter gallery mode, mobile CSS tweaks (hides launcher and Gallery On/Off toggle, fullscreen title moved bottom-left and always visible so it clears the orange button), horizontal swipe and edge-tap options, back-button hook.
+- `assets/autostart.js` (runs after): clicks the launcher to enter gallery mode, mobile CSS tweaks (top bar trimmed to Sort only, media filter applied from Settings, fullscreen title moved bottom-left and always visible so it clears the orange button), horizontal swipe and edge-tap options, back-button hook.
 
 Injection happens in `onPageFinished` only for listing URLs (`/`, `/r/*`, `/all`, `/popular`, `/user/*`, `/u/*`, `/me/m/*`), mirroring the script's `@match` list.
 
@@ -40,7 +40,7 @@ Injection happens in `onPageFinished` only for listing URLs (`/`, `/r/*`, `/all`
 
 ## Settings
 
-Log in (old.reddit login page in the WebView), log out (clears cookies), autoplay, mute by default, swipe direction (vertical, or vertical + horizontal), edge-tap navigation, NSFW, startup feed (last used / r/all / r/popular / front page / any saved feed), immersive mode, keep screen on, clear cache.
+Log in (old.reddit login page in the WebView), log out (clears cookies), show (images and videos / images only / videos only), autoplay, mute by default, swipe direction (vertical, or vertical + horizontal), edge-tap navigation, NSFW, startup feed (last used / r/all / r/popular / front page / any saved feed), immersive mode, keep screen on, clear cache.
 
 Changing settings reloads the current page so the new config is injected.
 
