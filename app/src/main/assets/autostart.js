@@ -10,7 +10,7 @@
         #gallery-container { padding: 10px !important; }
         /* Only Sort is left in the top bar (media filter lives in app Settings) */
         #gallery-controls { position: static !important; transform: none !important; display: flex !important;
-            justify-content: flex-end !important; margin: 0 0 8px 0 !important; padding: 0 !important;
+            justify-content: space-between !important; align-items: center !important; margin: 0 0 8px 0 !important; padding: 0 !important;
             background: transparent !important; box-shadow: none !important; }
         .gallery-select-wrap { padding: 0 10px !important; font-size: 13px !important; }
         .gallery-select-wrap select { min-height: 34px !important; font-size: 13px !important; }
@@ -26,6 +26,8 @@
         #gallery-container { padding-bottom: 96px !important; }
         #fullscreen-content { width: 100vw !important; max-width: 100vw !important;
             height: 86vh !important; max-height: 86vh !important; }
+        #rg-feed-name { color: #FF5700; font: 700 20px/1.2 sans-serif; padding: 0 4px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
         /* Swipe layer over embedded players; bottom strip left open for their controls */
         #fullscreen-content .rg-swipe { position: absolute; left: 0; right: 0; top: 0; bottom: 22%;
             z-index: 5; background: transparent; }
@@ -35,6 +37,21 @@
             max-width: 100% !important; max-height: 100% !important; object-fit: contain !important; }
     `;
     document.head.appendChild(css);
+
+    // Feed name, top-left of the bar (Sort stays on the right)
+    const controls = document.getElementById('gallery-controls');
+    if (controls) {
+        const seg = location.pathname.split('/').filter(Boolean);
+        let name = 'frontpage';
+        if (seg[0] === 'r' && seg[1]) name = seg[1].toLowerCase() === 'all' || seg[1].toLowerCase() === 'popular' ? seg[1] : 'r/' + seg[1];
+        else if (seg[0] === 'all' || seg[0] === 'popular') name = seg[0];
+        else if ((seg[0] === 'user' || seg[0] === 'u' || seg[0] === 'me') && seg.indexOf('m') > 0) name = 'm/' + seg[seg.indexOf('m') + 1];
+        else if ((seg[0] === 'user' || seg[0] === 'u') && seg[1]) name = 'u/' + seg[1];
+        const label = document.createElement('div');
+        label.id = 'rg-feed-name';
+        label.textContent = name;
+        controls.insertBefore(label, controls.firstChild);
+    }
 
     // Media filter from app Settings (click before the launcher so the first load is already filtered).
     if (cfg.media && cfg.media !== 'all') {

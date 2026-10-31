@@ -166,6 +166,24 @@ class MainActivity : AppCompatActivity() {
                 return false
             }
 
+            // Hide the raw old.reddit page while it loads; inject() fades the gallery in.
+            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                if (isListing(url)) {
+                    web.animate().cancel()
+                    web.alpha = 0f
+                    web.removeCallbacks(revealFallback)
+                    web.postDelayed(revealFallback, 8000) // never stay hidden if something fails
+                } else {
+                    reveal()
+                }
+            }
+
+            override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
+                super.onReceivedError(view, request, error)
+                if (request.isForMainFrame) reveal()
+            }
+
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
                 pageHost = Uri.parse(url).host
@@ -223,7 +241,15 @@ class MainActivity : AppCompatActivity() {
             append("\n}\n;\n")
             append(startJs)
         }
-        web.evaluateJavascript(js, null)
+        // Gallery mode is applied synchronously by autostart.js, so it's safe to show right after.
+        web.evaluateJavascript(js) { web.postDelayed({ reveal() }, 60) }
+    }
+
+    private val revealFallback = Runnable { reveal() }
+
+    private fun reveal() {
+        web.removeCallbacks(revealFallback)
+        if (web.alpha < 1f) web.animate().alpha(1f).setDuration(120).start()
     }
 
     private fun captureUsername() {
