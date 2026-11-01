@@ -85,6 +85,16 @@
         }).observe(fsContent, { childList: true });
     }
 
+    // Comment links use target=_blank, which the app blocks as a popup. Open them in place
+    // instead; the app hands any /comments/ URL to the Reddit app.
+    document.addEventListener('click', e => {
+        const a = e.target.closest && e.target.closest('a[href*="/comments/"]');
+        if (!a) return;
+        e.preventDefault();
+        e.stopPropagation();
+        location.href = a.href;
+    }, true);
+
     const viewer = document.getElementById('fullscreen-viewer');
     const key = k => window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
 
