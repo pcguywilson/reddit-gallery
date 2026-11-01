@@ -122,8 +122,23 @@ class MainActivity : AppCompatActivity() {
     /** External override (no rebuild needed) wins over the bundled asset. */
     private fun loadUserScript(): String {
         val override = getExternalFilesDir(null)?.let { File(it, "gallery.user.js") }
-        if (override != null && override.isFile) return override.readText()
-        return assets.open("gallery.user.js").bufferedReader().use { it.readText() }
+        val src = if (override != null && override.isFile) override.readText()
+        else assets.open("gallery.user.js").bufferedReader().use { it.readText() }
+        return patchUserScript(src)
+    }
+
+    /**
+     * In-memory patch (the file is untouched): in fullscreen, load the next page when within
+     * 5 posts of the end, and hold on the last post instead of wrapping while more exist.
+     * Skipped silently if a future version of the script no longer matches.
+     */
+    private fun patchUserScript(src: String): String {
+        val nav = "function navigateFullscreen(direction) {"
+        val wrap = "if (currentFullscreenIndex >= posts.length) currentFullscreenIndex = 0;"
+        if (!src.contains(nav) || !src.contains(wrap)) return src
+        return src
+            .replace(nav, nav + "\n        if (direction > 0 && after && !loading && currentFullscreenIndex >= posts.length - 5) loadPosts();")
+            .replace(wrap, "if (currentFullscreenIndex >= posts.length) currentFullscreenIndex = (after || loading) ? posts.length - 1 : 0;")
     }
 
     @SuppressLint("SetJavaScriptEnabled")
