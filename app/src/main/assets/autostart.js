@@ -28,6 +28,10 @@
             height: 86vh !important; max-height: 86vh !important; }
         #rg-feed-name { color: #FF5700; font: 700 20px/1.2 sans-serif; padding: 0 4px;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+        #rg-fs-sub { display: none; position: fixed; top: 18px; left: 12px; z-index: 2147483648;
+            max-width: calc(100vw - 110px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            background: rgba(0,0,0,0.65); color: #FF5700; font: 700 16px/1.2 sans-serif;
+            padding: 8px 12px; border-radius: 6px; text-decoration: none; }
         /* Swipe layer over embedded players; bottom strip left open for their controls */
         #fullscreen-content .rg-swipe { position: absolute; left: 0; right: 0; top: 0; bottom: 22%;
             z-index: 5; background: transparent; }
@@ -63,11 +67,23 @@
     const launcher = document.getElementById('gallery-launcher');
     if (launcher && !document.body.classList.contains('gallery-mode')) launcher.click();
 
-    // Fullscreen title: append post age
+    // Fullscreen: subreddit label top-left (tap to open that subreddit), post age after the title
     const fsTitle = document.getElementById('fullscreen-title');
-    if (fsTitle) {
+    const fsViewer = document.getElementById('fullscreen-viewer');
+    if (fsTitle && fsViewer) {
+        const subLabel = document.createElement('a');
+        subLabel.id = 'rg-fs-sub';
+        fsViewer.appendChild(subLabel);
         new MutationObserver(() => {
             const t = fsTitle.textContent;
+            const sub = (window.__rgSub || {})[t];
+            if (sub) {
+                subLabel.textContent = 'r/' + sub;
+                subLabel.href = '/r/' + sub;
+                subLabel.style.display = 'block';
+            } else if (!(window.__rgSub || {})[t.split('  · ')[0]]) {
+                subLabel.style.display = 'none';
+            }
             const a = (window.__rgAge || {})[t];
             if (a) fsTitle.textContent = t + '  · ' + a;
         }).observe(fsTitle, { childList: true, characterData: true, subtree: true });

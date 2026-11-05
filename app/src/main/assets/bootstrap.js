@@ -134,7 +134,13 @@
                 let kids = data.data.children;
                 // NSFW off: drop over_18 posts
                 if (!cfg.nsfw) kids = kids.filter(c => !(c.data && c.data.over_18));
-                kids.forEach(c => { fixMedia(c.data); addAge(c.data); });
+                kids.forEach(c => {
+                    fixMedia(c.data);
+                    // subreddit per post, keyed by title (same lookup as age)
+                    if (c.data && c.data.title && c.data.subreddit)
+                        (window.__rgSub = window.__rgSub || {})[c.data.title] = c.data.subreddit;
+                    addAge(c.data);
+                });
                 data.data.children = kids;
                 return new Response(JSON.stringify(data), {
                     status: res.status, statusText: res.statusText, headers: res.headers
